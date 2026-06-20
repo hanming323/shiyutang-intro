@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>师语堂 Web版 - 项目介绍</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            max-width: 960px;
+            margin: 40px auto;
+            padding: 0 20px;
+            font-family: "Microsoft YaHei", SimSun, sans-serif;
+            line-height: 1.8;
+            color: #222;
+            background-color: #f7f8fa;
+        }
+        .box {
+            background: #ffffff;
+            padding: 42px;
+            border-radius: 14px;
+            box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+        }
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 12px;
+            color: #111;
+        }
+        .divider {
+            width: 100%;
+            height: 1px;
+            background-color: #ddd;
+            margin: 24px 0;
+        }
+        h2 {
+            font-size: 21px;
+            margin: 32px 0 14px;
+            color: #1a1a1a;
+            border-left: 5px solid #409eff;
+            padding-left: 12px;
+        }
+        p {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .indent {
+            padding-left: 20px;
+        }
+        ul {
+            padding-left: 36px;
+            margin: 10px 0 16px;
+        }
+        li {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .strong {
+            font-weight: bold;
+            color: #337ecc;
+        }
+        .code-block {
+            background: #f3f4f6;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-family: Consolas, monospace;
+            font-size: 15px;
+            margin: 12px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>师语堂 Web 版 — 项目介绍</h1>
+        <div class="divider"></div>
+
+        <h2>一、项目定位</h2>
+        <p class="indent">师语堂是一个 <span class="strong">AI 私教课堂</span> Web 应用，核心理念是：用户上传一段老师的讲课视频（3-10 分钟），AI 自动学习该老师的语言风格、口头禅、语速语调，然后用户随时输入任意知识点，AI 就能用这位老师的声音和风格来授课。</p >
+        <p class="indent">产品形态为移动端优先的单页 Web 应用，采用 Node.js + Express 后端、原生 HTML/CSS/JavaScript 前端，目标部署平台为 Railway 免费云服务。</p >
+
+        <h2>二、核心业务流程</h2>
+        <p class="indent">整个产品围绕一条清晰的主线展开，分为三个大阶段。</p >
+
+        <p><strong>第一阶段：建立老师档案</strong></p >
+        <p class="indent">用户上传老师的讲课视频，系统通过 Multer 中间件接收文件后上传至腾讯云 COS 对象存储。随后调用腾讯云 ASR 录音文件识别服务，将视频中的语音转为文字稿。前端以轮询方式跟踪 ASR 任务进度，识别完成后将文字稿提交给 DeepSeek Chat API，由大模型提炼出该老师的风格标签——包括口头禅、语速、课堂结构、常用比喻、过渡语、语气、鼓励方式等七维度特征，存入数据库形成老师档案。</p >
+
+        <p><strong>第二阶段：AI 代课</strong></p >
+        <p class="indent">用户在黑板界面输入知识点，系统将老师风格标签作为提示词，调用 DeepSeek 生成三轨内容：口语讲解稿（spokenScript，500-800 字）、板书摘要（boardScript，200 字）和知识点卡（keyPoints）。</p >
+        <p class="indent">随后通过微软 Edge TTS 的免费 WebSocket 协议，根据老师风格自动匹配语音角色（亲切型选 Xiaoxiao、专业型选 Yunxi、激情型选 Xiaoyi），动态调整语速，将口语稿合成为 MP3 音频返回前端。前端以黑板主题按打字机效果逐字展示板书，同步播放语音。</p >
+
+        <p><strong>第三阶段：练习与复盘</strong></p >
+        <p class="indent">课堂中支持追问，用户输入问题后系统结合上下文用老师风格简短作答。此外还有 AI 自由对话（四种模式：自由练习、作文批改、情景模拟、课程答疑）、随机选择题刷题、学习记录统计、每日目标打卡等功能，形成完整的学习闭环。</p >
+
+        <h2>三、技术架构</h2>
+        <p><strong>后端（server.js + 10 个路由模块）：</strong></p >
+        <p class="indent">基于 Express 框架，没有用 ORM，直接用 sql.js 操作 SQLite 数据库。sql.js 是纯 JavaScript 实现的 SQLite，数据库完全在内存中运行，每次写操作后通过 <code class="code-block">export()</code> 将二进制数据写入 <code>data/shiyutang.db</code> 文件实现持久化，另设 30 秒定时自动保存。</p >
+        <p class="indent">共 8 张数据表：用户、视频任务、老师档案、课堂记录、聊天历史、反馈、练习题、学习记录和每日目标。对外暴露了 10 组 REST API，包括 auth（注册登录免登）、video（上传 + 提交 ASR）、asr（查询识别状态）、style（风格提炼）、lesson（讲课生成 + TTS）、chat（AI 对话）、question（练习题）、records（学习记录）、feedback（意见反馈）、home（首页聚合数据）。</p >
+        <p class="indent">所有 AI 接口统一对接 DeepSeek Chat API，语音合成对接 Edge TTS WebSocket 协议，文件存储使用腾讯云 COS SDK。</p >
+
+        <p><strong>前端（单页 SPA，无框架）：</strong></p >
+        <p class="indent">单一 HTML 文件加载全部资源，app.js 实现原生路由导航机制——每个页面是独立的渲染函数（renderLogin、renderHome 等），切换页面时清空容器 DOM 并调用目标函数重新绘制。11 个页面覆盖完整用户旅程：登录、首页、视频上传、分析等待、AI 课堂、AI 对话、练习、学习记录、个人中心、设置和反馈。</p >
+        <p class="indent">全局 API 封装层统一管理 fetch 请求，音频播放器工具类封装了 Web Audio 的加载、播放、暂停、进度回调以及自动播放策略受限时的错误反馈。登录态通过 localStorage 持久化，刷新页面自动恢复。</p >
+
+        <h2>四、关键依赖与环境</h2>
+        <p>核心 npm 依赖包括：</p >
+        <ul>
+            <li>Express 4.x（Web 服务器）</li>
+            <li>sql.js 1.9（纯 JS SQLite）</li>
+            <li>腾讯云 ASR SDK 4.0（语音识别）</li>
+            <li>cos-nodejs-sdk-v5 2.15（COS 对象存储）</li>
+            <li>ws 8.x（Edge TTS WebSocket 客户端）</li>
+            <li>dotenv（环境变量管理）</li>
+        </ul>
+        <p class="indent">项目无需编译构建步骤，直接 <code class="code-block">node server.js</code> 启动，监听 3000 端口。环境变量配置在 <code>.env</code> 文件中，需要填入腾讯云 SecretId/SecretKey 用于 ASR 和 COS，以及 DeepSeek API Key 用于 AI 能力。</p >
+
+        <h2>五、当前状态</h2>
+        <p class="indent">项目处于开发调试阶段，核心功能链路已走通：视频上传至 COS、ASR 语音识别、DeepSeek 风格提炼与讲课生成、Edge TTS 语音合成、AI 对话等主要模块均已完成代码编写。</p >
+        <p class="indent">近期修复了 COS 上传 403 权限问题（主账号密钥替换）、音频播放器无声问题（增强错误处理和自动播放策略反馈）、以及 DeepSeek API Key 未配置时的提示逻辑。目前所有 11 个页面和 10 组 API 均已就绪，待继续提升。</p >
+    </div>
+</body>
+</html>
