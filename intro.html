@@ -78,6 +78,18 @@
             text-align: right;
             font-size: 16px;
         }
+        .center-text {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 16px;
+        }
+        .feedback-link {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .feedback-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -97,7 +109,7 @@
 
         <p><strong>第二阶段：AI 代课</strong></p >
         <p class="indent">用户在黑板界面输入知识点，系统将老师风格标签作为提示词，调用 DeepSeek 生成三轨内容：口语讲解稿（spokenScript，500-800 字）、板书摘要（boardScript，200 字）和知识点卡（keyPoints）。</p >
-        <p class="indent">随后通过微软 Edge TTS 的免费 WebSocket 协议，根据老师风格自动匹配语音角色（亲切型选 Xiaoxiao、专业型选 Yunxi、激情型选 Xiaoyi），动态调整语速，将口语稿合成为 MP3 音频返回前端。前端以黑板主题按打字机效果逐字展示板书，同步播放语音。</p >
+        <p class="indent">随后通过腾讯云 TTS 服务，根据老师风格自动匹配语音角色，动态调整语速，将口语稿合成为 MP3 音频返回前端。前端以黑板主题按打字机效果逐字展示板书，同步播放语音。</p >
 
         <p><strong>第三阶段：练习与复盘</strong></p >
         <p class="indent">课堂中支持追问，用户输入问题后系统结合上下文用老师风格简短作答。此外还有 AI 自由对话（四种模式：自由练习、作文批改、情景模拟、课程答疑）、随机选择题刷题、学习记录统计、每日目标打卡等功能，形成完整的学习闭环。</p >
@@ -106,7 +118,7 @@
         <p><strong>后端（server.js + 10 个路由模块）：</strong></p >
         <p class="indent">基于 Express 框架，没有用 ORM，直接用 sql.js 操作 SQLite 数据库。sql.js 是纯 JavaScript 实现的 SQLite，数据库完全在内存中运行，每次写操作后通过 <code class="code-block">export()</code> 将二进制数据写入 <code>data/shiyutang.db</code> 文件实现持久化，另设 30 秒定时自动保存。</p >
         <p class="indent">共 8 张数据表：用户、视频任务、老师档案、课堂记录、聊天历史、反馈、练习题、学习记录和每日目标。对外暴露了 10 组 REST API，包括 auth（注册登录免登）、video（上传 + 提交 ASR）、asr（查询识别状态）、style（风格提炼）、lesson（讲课生成 + TTS）、chat（AI 对话）、question（练习题）、records（学习记录）、feedback（意见反馈）、home（首页聚合数据）。</p >
-        <p class="indent">所有 AI 接口统一对接 DeepSeek Chat API，语音合成对接 Edge TTS WebSocket 协议，文件存储使用腾讯云 COS SDK。</p >
+        <p class="indent">所有 AI 接口统一对接 DeepSeek Chat API，语音合成对接 腾讯云 TTS 服务，文件存储使用腾讯云 COS SDK。</p >
 
         <p><strong>前端（单页 SPA，无框架）：</strong></p >
         <p class="indent">单一 HTML 文件加载全部资源，app.js 实现原生路由导航机制——每个页面是独立的渲染函数（renderLogin、renderHome 等），切换页面时清空容器 DOM 并调用目标函数重新绘制。11 个页面覆盖完整用户旅程：登录、首页、视频上传、分析等待、AI 课堂、AI 对话、练习、学习记录、个人中心、设置和反馈。</p >
@@ -119,19 +131,24 @@
             <li>sql.js 1.9（纯 JS SQLite）</li>
             <li>腾讯云 ASR SDK 4.0（语音识别）</li>
             <li>cos-nodejs-sdk-v5 2.15（COS 对象存储）</li>
-            <li>ws 8.x（Edge TTS WebSocket 客户端）</li>
+            <li>ws 8.x（腾讯云 TTS 服务客户端）</li>
             <li>dotenv（环境变量管理）</li>
         </ul>
-        <p class="indent">项目无需编译构建步骤，直接 <code class="code-block">node server.js</code> 启动，监听 3000 端口。环境变量配置在 <code>.env</code> 文件中，需要填入腾讯云 SecretId/SecretKey 用于 ASR 和 COS，以及 DeepSeek API Key 用于 AI 能力。</p >
+        <p class="indent">项目在云端采用 腾讯云 Cloudbase 项目托管服务，监听 3000 端口。环境变量配置在 <code>.env</code> 文件中，需要填入腾讯云 SecretId/SecretKey 用于 ASR 和 COS，以及 DeepSeek API Key 用于 AI 能力。</p >
 
         <h2>五、当前状态</h2>
-        <p class="indent">项目处于开发调试阶段，核心功能链路已走通：视频上传至 COS、ASR 语音识别、DeepSeek 风格提炼与讲课生成、Edge TTS 语音合成、AI 对话等主要模块均已完成代码编写。</p >
+        <p class="indent">项目处于开发调试阶段，核心功能链路已走通：视频上传至 COS、ASR 语音识别、DeepSeek 风格提炼与讲课生成、腾讯云 TTS 语音合成、AI 对话等主要模块均已完成代码编写。</p >
         <p class="indent">近期修复了 COS 上传 403 权限问题（主账号密钥替换）、音频播放器无声问题（增强错误处理和自动播放策略反馈）、以及 DeepSeek API Key 未配置时的提示逻辑。目前所有 11 个页面和 10 组 API 均已就绪，待继续提升。</p >
 
         <!-- 落款部分 -->
         <div class="signature">
             <p>韩知宜</p >
             <p>2026 年 6 月 16 日</p >
+        </div>
+        <div class="center-text">
+            <a href="https://shiyutang-sh-273019-6-1434062270.sh.run.tcloudbase.com" target="_blank" rel="noopener noreferrer" class="feedback-link">
+                返回师语堂首页
+            </a >
         </div>
     </div>
 </body>
